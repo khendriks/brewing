@@ -19,7 +19,8 @@ class Ingredient(models.Model):
     unit = models.CharField(max_length=255)
 
 
-class MeasuredIngredient(Ingredient):
+class MeasuredIngredient(models.Model):
+    ingredient = models.ForeignKey(Ingredient)
     amount = models.DecimalField(max_digits=8, decimal_places=3)  # 11111.111
     recipe_step = models.ForeignKey('RecipeStep', related_name='ingredients')
 
