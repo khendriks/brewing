@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <h1>Beers</h1>
+    {% for beer in object_list %}
+        {% if beer.is_active %}
+            <div class="row">
+                <h2>{{ beer }}</h2>
+                <ul><div class="progress">
+                    <div class="progress-bar progress-bar-success" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                         aria-valuenow="{{ beer.progress }}" style="width:{{ beer.progress }}%">
+                        <span class="sr-only">{{ beer.progress }}%</span>
+                    </div>
+                </div></ul>
+            </div>
+            <ul>{{ beer }} <br>
+                {{ beer.is_active }}
+            </ul>
+        {% endif %}
+    {% endfor %}
+
+{% endblock %}

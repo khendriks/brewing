@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <h2>Beers</h2>
+    {% for beer in object_list %}
+        <ul>{{ beer }} <br>
+            {{ beer.is_active }}
+            {% for temperature in beer.temperatures.all %}
+                <li>{{ temperature.datetime }} with {{ temperature.temperature }} </li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+{% endblock %}
