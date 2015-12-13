@@ -1,0 +1,15 @@
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# IntelliJ project files
+.idea
+*.iml
+out
+gen
+
+# Database
+/db.sqlite3
+
+
