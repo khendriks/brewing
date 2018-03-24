@@ -1,0 +1,12 @@
+.tableCell{
+    width: 100%;
+}
+
+table{
+    width: 100%;
+    table-layout: fixed;
+}
+
+textarea{
+    width: 100%;
+}

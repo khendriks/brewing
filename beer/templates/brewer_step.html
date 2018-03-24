@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ step }}{% endblock %}
+{% block content %}
+    <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <a class="h1" href="{% url 'brewer-beer' step.beer.pk %}">{{ step.beer }}</a>
+    <div class="fieldWrapper">
+        {{ form.name.errors }}
+        {{ form.name }}
+    </div>
+    <br>
+    {% include "steps_part.html" with main=step url='brewer-step' %}
+    <br>
+    <div class="row">
+        <div class="fieldWrapper col-4">
+            {{ form.expected_temperature.errors }}
+            {{ form.expected_temperature.label_tag }}<br>
+            {{ form.expected_temperature }}°C
+        </div>
+        <div class="fieldWrapper col-4 text-center">
+            {{ form.duration.errors }}
+            {{ form.duration.label_tag }}<br>
+            {{ form.duration }}
+        </div>
+        <div class="fieldWrapper col-4 text-right">
+            {{ form.expected_gravity.errors }}
+            {{ form.expected_gravity.label_tag }}<br>
+            {{ form.expected_gravity }}°
+        </div>
+    </div>
+    <div class="fieldWrapper">
+        {{ form.description.errors }}
+        {{ form.description.label_tag }}<br>
+        {{ form.description }}
+    </div>
+    <h3>Ingredients</h3>
+    {{ ingredient_form_set.management_form }}
+    {% for ingredient_form in ingredient_form_set %}
+        <div class="row">
+        {{ ingredient_form.id }}
+            <div class="fieldWrapper col-3">
+                {{ ingredient_form.name.errors }}
+                {{ ingredient_form.name.label_tag }}
+                <br>
+                {{ ingredient_form.name }}
+            </div>
+            <div class="fieldWrapper col-3">
+                {{ ingredient_form.amount.erros }}
+                {{ ingredient_form.amount.label_tag }}
+                <br>
+                {{ ingredient_form.amount }}
+            </div>
+            <div class="fieldWrapper col-2">
+                {{ ingredient_form.unit.errors }}
+                {{ ingredient_form.unit.label_tag }}
+                <br>
+                {{ ingredient_form.unit }}
+            </div>
+            <div class="fieldWrapper col-1">
+                {{ ingredient_form.DELETE.errors }}
+                {{ ingredient_form.DELETE.label_tag }}
+                <br>
+                {{ ingredient_form.DELETE }}
+            </div>
+            <div class="fieldWrapper col-2">
+                {% for ingredient in ingredients %}
+                    {% if ingredient.id == ingredient_form.id.value %}
+                        Linked amount:<br>
+                        {% if not ingredient.linked %}
+                            <span class="text-danger">{{ ingredient.filled_amount | floatformat:3 }}</span>
+                        {% else %}
+                            {{ ingredient.filled_amount | floatformat:3 }}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="col-1 align-self-center text-right">
+                {% if ingredient_form.id.value %}
+                    <a role="button" class="btn btn-primary"
+                       href="{% url 'brewer-ingredient-link' ingredient_form.id.value %}">Link</a>
+                {% endif %}
+            </div>
+        </div>
+        <hr/>
+    {% endfor %}
+    <div class="row">
+        <div class="col-3"></div>
+        <div class="col-6">
+            <div class="fieldWrapper">
+                {{ form.beer.errors }}
+                {{ form.beer.label_tag }}
+                {{ form.beer }}
+            </div>
+            <div class="fieldWrapper" data-toggle="buttons">
+                {{ form.parent.errors }}
+                {{ form.parent.label_tag }}
+                <label class="btn btn-outline-danger btn-sm{% if step.parent.pk is None %} active{% endif %}" style="width: 100%; margin-bottom: 0">
+                    <input type="radio" name="parent" value autocomplete="off" style="display: none">
+                    Top
+                </label>
+                <table>
+                    {% with step as main %}
+                        {% for row in parents %}
+                            <tr>
+                                {% for step in row %}
+                                    {% if not done %}
+                                        <td colspan="{{ step.get_width }}">
+                                            <label class="btn btn-outline-primary btn-sm{% if step.pk == main.parent.pk %} active{% endif %}" style="width: 100%; margin-bottom: 0">
+                                                <input type="radio" name="parent" value="{{ step.pk }}" autocomplete="off" style="display: none" {% if step.pk == main.parent.pk %}checked="checked" {% endif %}>
+                                                {{ step }}
+                                            </label>
+                                        </td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    {% endwith %}
+                </table>
+            </div>
+        </div>
+        <div class="col-3"></div>
+    </div>
+    {% if parents %}
+        <br>
+    {% endif %}
+    <div class="row">
+        <div class="col-4">
+            <a role="button" class="btn btn-danger" href="{% if step.pk %}{% url 'brewer-step-delete' step.pk %}{% else %}{% url 'brewer-beer' step.beer.pk %}{% endif %}">Delete</a>
+        </div>
+    <div class="col-4 text-center">
+
+        </div>
+        <div class="col-4 text-right">
+            <input type="submit" name="action" value="Add another" class="btn btn-primary" role="button"/>
+            <input type="submit" name="action" value="Save" class="btn btn-primary" role="button"/>
+            <input type="submit" name="action", value="Finish" class="btn btn-success" role="button"/>
+        </div>
+    </div>
+    </form>
+{% endblock %}

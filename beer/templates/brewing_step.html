@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load timedelta_filter %}
+{% load static %}
+{% block title %}{{ step }}{% endblock %}
+{% block content %}
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% for key, value in form.errors.items %}
+            {% for error in value %}
+                {{ key }} {{ error }}
+            {% endfor %}
+        {% endfor %}
+        <a class="h1" href="{% url 'brewing-beer' step.beer.pk %}">{{ step.beer }}</a>
+        <h3>{{ step }}</h3>
+        <br>
+        {% include "steps_part.html" with main=step url='brewing-step' %}
+        <br>
+        <div class="row">
+            {% if step.expected_temperature %}
+                <div class="col-3">
+                    Expected Temperature<br>
+                    {{ step.expected_temperature }}°C
+                </div>
+                <div class="fieldWrapper col-3 text-center">
+                    {{ form.actual_temperature.errors }}
+                    {{ form.actual_temperature.label_tag }}<br>
+                    {{ form.actual_temperature }}
+                </div>
+            {% else %}
+                <div class="col-6"></div>
+            {% endif %}
+            {% if step.expected_gravity %}
+                <div class="fieldWrapper col-3 text-center">
+                    Expected Gravity<br>
+                    {{ step.expected_gravity }}°
+                </div>
+                <div class="fieldWrapper col-3 text-right">
+                    {{ form.actual_gravity.errors }}
+                    {{ form.actual_gravity.label_tag }}<br>
+                    {{ form.actual_gravity }}°
+                </div>
+            {% endif %}
+        </div>
+        <div class="row">
+            <div class="progress col-12">
+                {% if step.finish %}
+                    <div class="progress-bar bg-success w-100" role="progressbar"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">{% if step.actual_duration.seconds < 1 %}Done{% else %}100%{% endif %}</div>
+                {% else %}
+                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" id="progressbar"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width: 0%">0%</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <span class="col-4">
+                {% if step.start %}
+                    {{ step.start | date:"D d-m-Y H:i" }}
+                    <span class="jstimestamp" id="start">{{ step.start | date:"U" }}</span>
+                {% endif %}
+            </span>
+            <span class="col-4 text-center">
+                {% if step.finish %}
+                    {{ step.actual_duration | timedelta }}
+                {% elif step.duration %}
+                    {{ step.duration | timedelta }}
+                    <span class="jstimestamp" id="duration">{{ step.duration | timedelta:"U" }}</span>
+                {% endif %}
+            </span>
+            <span class="col-4 text-right">
+                {% if step.finish %}
+                    {{ step.finish | date:"D d-m-Y H:i"  }}
+                    <span class="jstimestamp" id="finish">{{ step.finish | date:"U" }}</span>
+                {% elif step.expected_finish %}
+                    {{ step.expected_finish | date:"D d-m-Y H:i"  }}
+                {% endif %}
+            </span>
+            <audio id="alarm" src="{% static "beer/alarm.mp3" %}" preload="auto"></audio>
+        </div>
+        <span>
+            {{ step.description }}
+        </span>
+        <div class="row">
+            <div class="col-4">
+                {{ step.duration_to_top }}
+            </div>
+            <div class="col-4 text-center">
+            </div>
+            <div class="col-4 text-right">
+                {% if step.finish %}
+                    <button class="btn btn-success" name="action" value="save" type="submit">Opslaan</button>
+                {% else %}
+                    <button class="btn btn-primary" name="action" value="save" type="submit">Opslaan</button>
+                    <button class="btn btn-success" name="action" value="finish" type="submit">Finish</button>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+{% endblock %}

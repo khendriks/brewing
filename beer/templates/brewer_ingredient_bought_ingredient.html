@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+    <form method="post">
+    {% csrf_token %}
+    {{ form.management_form }}
+    {% for formpart in form %}
+        {{ formpart }}
+    {% endfor %}
+    <input type="submit" name="action" value="Save" class="btn btn-primary" role="button"/>
+    </form>
+{% endblock %}

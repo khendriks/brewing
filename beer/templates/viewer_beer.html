@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>{{ beer }}</h1>
+    <br>
+    {% include "steps_part.html" with main=step url='beer-step' %}
+    <br>
+    <h5>€{{ beer.sell_price | floatformat:2}}</h5>
+    <br>
+    {{ beer.note }}
+{% endblock %}
