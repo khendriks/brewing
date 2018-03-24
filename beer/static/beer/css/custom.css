@@ -1,0 +1,14 @@
+.beer-list-item{
+    margin-bottom: 4px;
+    margin-top: 4px;
+    width: 100%;
+    white-space: normal;
+}
+
+.beer-text{
+    width: 100%;
+}
+
+.jstimestamp{
+    display: none;
+}

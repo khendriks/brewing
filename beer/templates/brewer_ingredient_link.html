@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+    <form method="post">
+        {% csrf_token %}
+        {{ form.management_form }}
+        {% for subform in form %}
+            {{ subform }}
+            <hr/>
+        {% endfor %}
+        <button class="btn btn-success" name="action" value="save" type="submit">Opslaan</button>
+    </form>
+{% endblock %}

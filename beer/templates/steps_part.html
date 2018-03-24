@@ -1,0 +1,23 @@
+<table>
+    {% for row in steps %}
+        <tr>
+            {% for step in row %}
+                <td colspan="{{ step.get_width }}">
+                    {% if step.pk %}
+                        <a role="button" class="btn btn-sm
+                                                {% if step != main and step.done %}btn-outline-success
+                                                {% elif step != main and step.lacking %}btn-outline-danger
+                                                {% elif step != main and step.in_progress %}bg-warning progress-bar-striped progress-bar-animated btn-warning
+                                                {% elif step != main %}btn-outline-primary
+                                                {% elif step.done %}btn-success
+                                                {% elif step.lacking %}btn-danger
+                                                {% elif step.in_progress %}bg-warning progress-bar-striped progress-bar-animated btn-warning
+                                                {% else %}btn-primary{% endif %}
+                                                tableCell" href="{% url url step.pk %}">{{ step }}
+                        </a>
+                    {% endif %}
+                </td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+</table>

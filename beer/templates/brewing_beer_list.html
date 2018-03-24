@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>beers</h1>
+    <br>
+    {% for beer in beers %}
+        <a role="button" class="btn {% if beer.done %}btn-outline-success{% elif beer.in_progress %}bg-warning progress-bar-striped progress-bar-animated btn-warning{% else %}btn-outline-primary{% endif %} beer-list-item row" href="{% url 'brewing-beer' beer.pk %}">
+                <div class="p2 beer-text">
+                    <span class="h1">{{ beer }}</span><br>
+                    <div class="text-left justify-content-between">{{ beer.note }}</div>
+                </div>
+        </a><br>
+    {% endfor %}
+    <div class="row">
+        <div class="col-12 text-center">
+            <a role="button" class="btn btn-primary" href="{% url 'brewer-beer-new' %}">New Beer</a>
+        </div>
+    </div>
+{% endblock %}

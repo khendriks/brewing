@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>beers</h1>
+    <br>
+    {% for beer in beers %}
+        <a role="button" class="btn btn-outline-warning beer-list-item row" href="{% url 'beer' beer.pk %}">
+            <div class="d-flex flex-row-reverse">
+                <div class="p2 align-self-center">€{{ beer.sell_price | floatformat:2}}</div>
+                <div class="p2 beer-text">
+                    <span class="h1">{{ beer }}</span><br>
+                    <div class="text-left justify-content-between">{{ beer.note }}</div>
+                </div>
+            </div>
+        </a><br>
+    {% endfor %}
+{% endblock %}

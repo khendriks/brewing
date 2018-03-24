@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load timedelta_filter %}
+{% block title %}{{ beer }}{% endblock %}
+{% block content %}
+    {{ beer }}
+    <br>
+    {% include "steps_part.html" with main=step url='brewing-step' %}
+    {{ beer.note }}
+    <div class="row">
+            <div class="progress col-12">
+                {% if beer.finish %}
+                    <div class="progress-bar bg-success w-100" role="progressbar"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">{% if step.actual_duration.seconds < 1 %}Done{% else %}100%{% endif %}</div>
+                {% else %}
+                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" id="progressbar"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width: 0%">0%</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <span class="col-4">
+                {% if beer.start %}
+                    {{ beer.start | date:"D d-m-Y H:i" }}
+                    <span class="jstimestamp" id="start">{{ beer.start | date:"U" }}</span>
+                {% endif %}
+            </span>
+            <span class="col-4 text-center">
+                {% if beer.finish %}
+                    {{ beer.actual_duration | timedelta }}
+                {% elif beer.duration %}
+                    {{ beer.duration | timedelta }}
+                    <span class="jstimestamp" id="duration">{{ beer.duration | timedelta:"U" }}</span>
+                {% endif %}
+            </span>
+            <span class="col-4 text-right">
+                {% if beer.finish %}
+                    {{ beer.finish | date:"D d-m-Y H:i"  }}
+                    <span class="jstimestamp" id="finish">{{ beer.finish | date:"U" }}</span>
+                {% elif beer.expected_finish %}
+                    {{ beer.expected_finish | date:"D d-m-Y H:i"  }}
+                {% endif %}
+            </span>
+        </div>
+    <div class="row">
+        <div class="col-4">
+        </div>
+        <div class="col-4 text-center">
+        </div>
+        <div class="col-4 text-right">
+            {% if not beer.start and beer.steps%}
+                <a role="button" class="btn btn-success" href="{% url 'brewing-step-start' beer.first_step.pk %}">Start</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

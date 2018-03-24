@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+    <a class="h1" href="{% url 'beer' step.beer.pk %}">{{ step.beer }}</a>
+    <h3>{{ step }}</h3>
+    <br>
+    {% include "steps_part.html" with main=step url='beer-step' %}
+    <br>
+    <div class="row">
+        <p class="col-6">{% if step.actual_temperature %}Temperature <br>{{ step.actual_temperature }} °C{% endif %}</p>
+        <p class="col-6 text-right">{% if step.actual_gravity %}Gravity <br>{{ step.actual_gravity }}°{% endif %}</p>
+    </div>
+    <br>
+    {{ step.note }}
+{% endblock %}
