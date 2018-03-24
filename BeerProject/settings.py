@@ -25,7 +25,8 @@ SECRET_KEY = 'lej_&ihl-z(meoof8g94639kvv_n6ogva8lbvxuavjc9@igpu#'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['arcane-falls-2406.herokuapp.com',
+                 'keeshendriks.com']
 
 
 # Application definition
