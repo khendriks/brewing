@@ -175,8 +175,8 @@ class Beer(models.Model):
 
 
 class Step(models.Model):
-    beer = models.ForeignKey(Beer, related_name='steps')
-    parent = models.ForeignKey('self', verbose_name='next step', null=True, blank=True)
+    beer = models.ForeignKey(Beer, models.CASCADE, related_name='steps')
+    parent = models.ForeignKey('self', models.SET_NULL, verbose_name='next step', null=True, blank=True)
 
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
@@ -362,7 +362,7 @@ class BoughtIngredient(models.Model):
 
 
 class Ingredient(models.Model):
-    step = models.ForeignKey(Step, related_name='ingredients')
+    step = models.ForeignKey(Step, models.CASCADE, related_name='ingredients')
     name = models.CharField(max_length=100)
     bought_ingredients = models.ManyToManyField(BoughtIngredient, related_name='usages', through='IngredientBoughtIngredient')
 
@@ -403,8 +403,8 @@ class Ingredient(models.Model):
 
 
 class IngredientBoughtIngredient(models.Model):
-    ingredient = models.ForeignKey(Ingredient, related_name='ingredient_bought_ingredients')
-    bought_ingredient = models.ForeignKey(BoughtIngredient, related_name='ingredient_bought_ingredients')
+    ingredient = models.ForeignKey(Ingredient, models.CASCADE, related_name='ingredient_bought_ingredients')
+    bought_ingredient = models.ForeignKey(BoughtIngredient, models.CASCADE, related_name='ingredient_bought_ingredients')
     amount = models.DecimalField(max_digits=10, decimal_places=3)
 
     @cached_property
