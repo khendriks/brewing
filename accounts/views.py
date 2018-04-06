@@ -6,7 +6,7 @@ from django.views.generic import UpdateView
 class ProfileUpdateView(UpdateView):
     model = User
     fields = ['first_name', 'last_name', 'email']
-    template_name = 'registration\profile.html'
+    template_name = 'registration/profile.html'
     success_url = reverse_lazy('profile')
 
     def get_object(self, queryset=None):
