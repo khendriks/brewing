@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from beer.views import BeerDetailView, StepDetailView, HomeView, StepWithoutBeerView, BeerDeleteView, StepDeleteView, \
+from beer.views import BeerDetailView, StepDetailView, StepWithoutBeerView, BeerDeleteView, StepDeleteView, \
     BeerListView, IngredientCreateView, IngredientUpdateView, IngredientDeleteView, BoughtIngredientCreateView, \
     BoughtIngredientUpdateView, BoughtIngredientDeleteView, BoughtIngredientListView, BrewingStepStartView, \
     IngredientBoughtIngredientView, IngredientLinkView, BeerCopyView
@@ -31,5 +31,4 @@ urlpatterns = [
     url(r'^beer/(?P<pk>[0-9]+)/$', BeerDetailView.as_view(), name='beer'),
     url(r'^step/(?P<pk>[0-9]+)/$', StepDetailView.as_view(), name='beer-step'),
     url(r'^', BeerListView.as_view(), name='beer-list'),
-    url(r'^$', HomeView.as_view(), name='home')
 ]

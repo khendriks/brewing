@@ -13,9 +13,6 @@ from beer.models import Beer, Step, Ingredient, BoughtIngredient, IngredientBoug
 # Create your views here.
 from beer.utils import TreeTable
 
-class HomeView(TemplateView):
-    template_name = 'home.html'
-
 
 class BeerListView(ListView):
     model = Beer
