@@ -2,7 +2,7 @@
 {% block content %}
     <div id="content-container" class="container p-none">
         <div class="lgn-container col-lg-8">
-            <form id="login-form" method="post" action="{% url 'login' %}">
+            <form id="profile-form" method="post" action="">
                 {% csrf_token %}
                 {{ form }}
                 <input type="submit" value="Save"
