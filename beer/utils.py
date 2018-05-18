@@ -1,4 +1,5 @@
-
+def is_staff(user):
+    return user.is_staff and user.is_active
 
 class TreeTable(object):
 

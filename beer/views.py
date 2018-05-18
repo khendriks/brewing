@@ -1,5 +1,6 @@
+from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 from django.db import models
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
@@ -9,22 +10,49 @@ from django.views.generic.edit import FormMixin, DeleteView, FormView, CreateVie
 from beer.forms import BeerForm, BrewerStepForm, BrewingStepForm, IngredientStepFormSet, \
     IngredientBoughtIngredientFormSet
 from beer.models import Beer, Step, Ingredient, BoughtIngredient, IngredientBoughtIngredient
+from beer.utils import TreeTable, is_staff
 
 # Create your views here.
-from beer.utils import TreeTable
 
 
 class BeerListView(ListView):
+    brewer = False
+    brewing = False
     model = Beer
     template_name = 'viewer_beer_list.html'
     context_object_name = 'beers'
 
+    def get_queryset(self):
+        if self.brewer or self.brewing:
+            if self.request.user.pk is None:
+                return Beer.objects.none()
+            return Beer.objects.filter(brewer__pk=self.request.user.pk)
+        return Beer.objects.all()
 
-class BeerDetailView(ListView, FormMixin):
+
+class BeerDetailView(UserPassesTestMixin, ListView, FormMixin):
     brewer = False
     brewing = False
     model = Step
     template_name = 'viewer_beer.html'
+    raise_exception = True
+
+    def test_func(self):
+        if not self.brewer and not self.brewing:
+            return True
+
+        user = self.request.user
+        try:
+            brewer = Beer.objects.get(pk=self.kwargs.get('pk')).brewer
+        except Beer.DoesNotExist:
+            # new beer
+            return user.pk is not None  # new beer is only for logged in users
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        return is_staff(user)
+
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -86,10 +114,21 @@ class BeerDetailView(ListView, FormMixin):
         return reverse('brewer-beer', kwargs={'pk': self.kwargs.get('pk')})
 
 
-class BeerDeleteView(DeleteView):
+class BeerDeleteView(UserPassesTestMixin, DeleteView):
     model = Beer
     success_url = reverse_lazy('brewer-beer-list')
     template_name = 'confirm_delete.html'
+    raise_exception = True
+
+    def test_func(self):
+        brewer = self.get_object().brewer
+        user = self.request.user
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        # this is an orphan beer
+        return is_staff(user)
 
     def delete(self, request, *args, **kwargs):
         # also delete all steps of this beer
@@ -100,12 +139,35 @@ class BeerDeleteView(DeleteView):
         return super(BeerDeleteView, self).delete(request, *args, **kwargs)
 
 
-class StepDetailView(ListView, FormMixin):
+class StepDetailView(UserPassesTestMixin, ListView, FormMixin):
     brewer = False
     brewing = False
     model = Step
     template_name = 'viewer_step.html'
     form_class = BrewerStepForm
+    raise_exception = True
+
+    def test_func(self):
+        if not self.brewer and not self.brewing:
+            return True
+
+        user = self.request.user
+
+        brewer = None
+        pk = self.kwargs.get('pk')
+        if pk:
+            step = Step.objects.get(pk=self.kwargs.get('pk'))
+            if step:
+                brewer = step.brewer
+        else:
+            beer = Beer.objects.get(pk=self.kwargs.get('beer_pk'))
+            if beer:
+                brewer = beer.brewer
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        return is_staff(user)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -248,9 +310,20 @@ class StepDetailView(ListView, FormMixin):
             step.parent.save()
 
 
-class StepDeleteView(DeleteView):
+class StepDeleteView(UserPassesTestMixin, DeleteView):
     model = Step
     template_name = 'confirm_delete.html'
+    raise_exception = True
+
+    def test_func(self):
+        brewer = self.get_object().brewer
+        user = self.request.user
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        # this is an orphan beer
+        return is_staff(user)
 
     def get_success_url(self):
         beer_pk = self.object.beer.pk
@@ -270,18 +343,44 @@ class StepWithoutBeerView(RedirectView):
 class BrewingStepStartView(RedirectView):
     pattern_name = 'brewing-step'
     permanent = True
+    raise_exception = True
+
+    def test_func(self):
+        step = get_object_or_404(Step, pk=self.kwargs.get('pk'))
+
+        brewer = step.brewer
+        user = self.request.user
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        # this is an orphan beer
+        return is_staff(user)
 
     def get_redirect_url(self, *args, **kwargs):
         # Start the step if not started
-        step = Step.objects.get(pk=self.kwargs.get('pk'))
+        step = get_object_or_404(Step, pk=self.kwargs.get('pk'))
         if not step.start:
             step.start = timezone.now()
             step.save()
         return super(BrewingStepStartView, self).get_redirect_url(*args, **kwargs)
 
 
-class BeerCopyView(RedirectView):
+class BeerCopyView(UserPassesTestMixin, RedirectView):
     pattern_name = 'brewer-beer'
+    raise_exception = True
+
+    def test_func(self):
+        beer = get_object_or_404(Beer, pk=self.kwargs.get('pk'))
+
+        brewer = beer.brewer
+        user = self.request.user
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        # this is an orphan beer
+        return is_staff(user)
 
     def get_redirect_url(self, *args, **kwargs):
         original = Beer.objects.get(pk=self.kwargs.get('pk'))
@@ -290,33 +389,8 @@ class BeerCopyView(RedirectView):
         return reverse('brewer-beer', kwargs={'pk': copy.pk})
 
 
-class IngredientCreateView(CreateView):
-    model = Ingredient
-    template_name = 'brewer_ingredient.html'
-    fields = ['name', 'step', 'bought_ingredient', 'amount', 'unit']
 
-    def form_valid(self, form):
-        self.object = form.save()
-        return super(IngredientCreateView, self).form_valid(form)
-
-    def get_success_url(self):
-        return reverse('brewer-ingredient', kwargs={'pk': self.object.pk})
-
-class IngredientUpdateView(UpdateView):
-    model = Ingredient
-    template_name = 'brewer_ingredient.html'
-    fields = ['name', 'step', 'bought_ingredient', 'amount', 'unit']
-
-
-class IngredientDeleteView(DeleteView):
-    model = Ingredient
-    template_name = 'confirm_delete.html'
-
-    def get_success_url(self):
-        step_pk = self.object.step.pk
-        return reverse('brewer-step', kwargs={'pk': step_pk})
-
-class BoughtIngredientCreateView(CreateView):
+class BoughtIngredientCreateView(LoginRequiredMixin, CreateView):
     model = BoughtIngredient
     template_name = 'brewer_ingredient.html'
     fields = ['name', 'note', 'price', 'amount', 'unit']
@@ -328,52 +402,78 @@ class BoughtIngredientCreateView(CreateView):
     def get_success_url(self):
         return reverse('brewer-bought-ingredient', kwargs={'pk': self.object.pk})
 
-class BoughtIngredientUpdateView(UpdateView):
+class BoughtIngredientUpdateView(UserPassesTestMixin, UpdateView):
     model = BoughtIngredient
     template_name = 'brewer_ingredient.html'
     fields = ['name', 'note', 'price', 'amount', 'unit']
+    raise_exception = True
+
+    def test_func(self):
+        bought_ingredient = get_object_or_404(BoughtIngredient, pk=self.kwargs.get('pk'))
+
+        brewer = bought_ingredient.brewer
+        user = self.request.user
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        # this is an orphan beer
+        return is_staff(user)
 
     def get_success_url(self):
         return reverse('brewer-bought-ingredient', kwargs={'pk': self.object.pk})
 
 
-class BoughtIngredientDeleteView(DeleteView):
+class BoughtIngredientDeleteView(UserPassesTestMixin, DeleteView):
     model = BoughtIngredient
     template_name = 'confirm_delete.html'
+    raise_exception = True
+
+    def test_func(self):
+        bought_ingredient = get_object_or_404(BoughtIngredient, pk=self.kwargs.get('pk'))
+
+        brewer = bought_ingredient.brewer
+        user = self.request.user
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        # this is an orphan beer
+        return is_staff(user)
 
     def get_success_url(self):
         step_pk = self.object.step.pk
         return reverse('brewer-step', kwargs={'pk': step_pk})
 
 
-class BoughtIngredientListView(ListView):
+class BoughtIngredientListView(LoginRequiredMixin, ListView):
     queryset = BoughtIngredient.objects.filter(done=False)
     template_name = 'brewer_bought_ingredient_list.html'
     context_object_name = 'ingredients'
 
-
-class IngredientBoughtIngredientView(FormView):
-    form_class = IngredientBoughtIngredientFormSet
-    template_name = 'brewer_ingredient_bought_ingredient.html'
-
-    def form_valid(self, form):
-        form.save()
-        return super(IngredientBoughtIngredientView, self).form_valid(form)
-
     def get_queryset(self):
-        return IngredientBoughtIngredient.objects.filter(ingredient=self.kwargs.get('pk'))
+        user = self.request.user
+        if user.pk is None:
+            return  BoughtIngredient.objects.none()
 
-    def get_context_data(self, **kwargs):
-        kwargs['form'] = self.form_class(queryset=self.get_queryset())
-
-        return super(IngredientBoughtIngredientView, self).get_context_data(**kwargs)
-
-    def get_success_url(self):
-        return reverse('brewer-ingredient-bought-ingredient', kwargs={'pk': self.kwargs.get('pk')})
+        return BoughtIngredient.objects.filter(done=False).filter(brewer__pk=user.pk)
 
 
-class IngredientLinkView(FormView):
+class IngredientLinkView(UserPassesTestMixin, FormView):
     template_name = 'brewer_ingredient_link.html'
+    raise_exception = True
+
+    def test_func(self):
+        ingredient = get_object_or_404(Ingredient, pk=self.kwargs.get('ingredient_pk'))
+
+        brewer = ingredient.brewer
+        user = self.request.user
+
+        if brewer:
+            return brewer.pk == user.pk
+
+        # this is an orphan beer
+        return is_staff(user)
 
     def get_form(self, form_class=None):
         ingredient = Ingredient.objects.get(pk=self.kwargs.get('ingredient_pk'))
