@@ -8,7 +8,7 @@ from beer.models import Beer, Step, Ingredient, IngredientBoughtIngredient
 class BeerForm(forms.ModelForm):
     class Meta:
         model = Beer
-        fields = ('name', 'note', 'sell_price')
+        fields = ('name', 'note', 'sell_price', 'brewer')
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': 'Name'}),
         }
