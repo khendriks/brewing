@@ -3,6 +3,7 @@ import warnings
 from datetime import datetime, timedelta
 
 import pytz
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 # from django.utils.datetime_safe import datetime
@@ -19,6 +20,8 @@ UNITS = ((GRAM, 'gram'), (LITER, 'Liter'))
 class Beer(models.Model):
     name = models.CharField(max_length=100, help_text='help')
     note = models.TextField(blank=True)
+
+    brewer = models.ForeignKey(User, models.SET_NULL, null=True, blank=True)
 
     sell_price = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     bottles = models.PositiveIntegerField(null=True, blank=True)
@@ -295,6 +298,10 @@ class Step(models.Model):
                 return step
 
     @property
+    def brewer(self):
+        return self.beer.brewer
+
+    @property
     def linked(self):
         for ingredient in self.ingredients.all():
             if not ingredient.linked:
@@ -343,6 +350,8 @@ class Step(models.Model):
 class BoughtIngredient(models.Model):
     name = models.CharField(max_length=100)
     note = models.TextField(blank=True)
+
+    brewer = models.ForeignKey(User, models.SET_NULL, null=True, blank=True)
 
     price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     amount = models.DecimalField(max_digits=10, decimal_places=3, default=0)
@@ -394,6 +403,10 @@ class Ingredient(models.Model):
     def linked(self):
         return self.amount == self.filled_amount
 
+    @property
+    def brewer(self):
+        return self.step.brewer
+
     def copy(self, step):
         copy = Ingredient(step=step, name=self.name, amount=self.amount, unit=self.unit)
         return copy.save()
@@ -420,6 +433,10 @@ class IngredientBoughtIngredient(models.Model):
             return 0
         unit_price = self.bought_ingredient.price / self.bought_ingredient.used_amount
         return unit_price * self.amount
+
+    @property
+    def brewer(self):
+        return self.ingredient.brewer
 
     def __str__(self):
         return self.ingredient.name + '-' + self.bought_ingredient.name
