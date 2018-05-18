@@ -1,11 +1,12 @@
 from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 from django.db import models
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView, RedirectView
-from django.views.generic.edit import FormMixin, DeleteView, FormView, CreateView, UpdateView
+from django.views.generic.edit import FormMixin, DeleteView, FormView, CreateView, UpdateView, BaseCreateView
 
 from beer.forms import BeerForm, BrewerStepForm, BrewingStepForm, IngredientStepFormSet, \
     IngredientBoughtIngredientFormSet
@@ -42,17 +43,17 @@ class BeerDetailView(UserPassesTestMixin, ListView, FormMixin):
             return True
 
         user = self.request.user
-        try:
-            brewer = Beer.objects.get(pk=self.kwargs.get('pk')).brewer
-        except Beer.DoesNotExist:
-            # new beer
-            return user.pk is not None  # new beer is only for logged in users
+        pk = self.kwargs.get('pk')
+        if not pk:
+            # new beer is only for logged in users
+            self.raise_exception = False
+            return user.pk is not None
 
+        brewer = get_object_or_404(Beer, pk=pk).brewer
         if brewer:
             return brewer.pk == user.pk
 
         return is_staff(user)
-
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -101,7 +102,13 @@ class BeerDetailView(UserPassesTestMixin, ListView, FormMixin):
             return self.form_invalid(form)
 
     def form_valid(self, form):
-        beer = form.save()
+        if self.kwargs.get('pk'):
+            beer = form.save()
+        else:
+            beer = form.save(commit=False)
+            beer.brewer = self.request.user
+            beer.save()
+
         self.kwargs['pk'] = beer.pk
         self.kwargs['beer'] = beer
         self.kwargs['submit_type'] = form.data['action']
@@ -156,13 +163,9 @@ class StepDetailView(UserPassesTestMixin, ListView, FormMixin):
         brewer = None
         pk = self.kwargs.get('pk')
         if pk:
-            step = Step.objects.get(pk=self.kwargs.get('pk'))
-            if step:
-                brewer = step.brewer
+            brewer = get_object_or_404(Step, pk=self.kwargs.get('pk')).brewer
         else:
-            beer = Beer.objects.get(pk=self.kwargs.get('beer_pk'))
-            if beer:
-                brewer = beer.brewer
+            brewer = get_object_or_404(Beer, pk=self.kwargs.get('beer_pk')).brewer
 
         if brewer:
             return brewer.pk == user.pk
@@ -396,8 +399,10 @@ class BoughtIngredientCreateView(LoginRequiredMixin, CreateView):
     fields = ['name', 'note', 'price', 'amount', 'unit']
 
     def form_valid(self, form):
-        self.object = form.save()
-        return super(BoughtIngredientCreateView, self).form_valid(form)
+        self.object = form.save(commit=False)
+        self.object.brewer = self.request.user
+        self.object.save()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse('brewer-bought-ingredient', kwargs={'pk': self.object.pk})
