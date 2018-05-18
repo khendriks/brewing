@@ -42,17 +42,17 @@ class BeerDetailView(UserPassesTestMixin, ListView, FormMixin):
             return True
 
         user = self.request.user
-        try:
-            brewer = Beer.objects.get(pk=self.kwargs.get('pk')).brewer
-        except Beer.DoesNotExist:
-            # new beer
-            return user.pk is not None  # new beer is only for logged in users
+        pk = self.kwargs.get('pk')
+        if not pk:
+            # new beer is only for logged in users
+            self.raise_exception = False
+            return user.pk is not None
 
+        brewer = get_object_or_404(Beer, pk=pk).brewer
         if brewer:
             return brewer.pk == user.pk
 
         return is_staff(user)
-
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -156,13 +156,9 @@ class StepDetailView(UserPassesTestMixin, ListView, FormMixin):
         brewer = None
         pk = self.kwargs.get('pk')
         if pk:
-            step = Step.objects.get(pk=self.kwargs.get('pk'))
-            if step:
-                brewer = step.brewer
+            brewer = get_object_or_404(Step, pk=self.kwargs.get('pk')).brewer
         else:
-            beer = Beer.objects.get(pk=self.kwargs.get('beer_pk'))
-            if beer:
-                brewer = beer.brewer
+            brewer = get_object_or_404(Beer, pk=self.kwargs.get('beer_pk')).brewer
 
         if brewer:
             return brewer.pk == user.pk
