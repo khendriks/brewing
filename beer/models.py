@@ -6,15 +6,26 @@ import pytz
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-# from django.utils.datetime_safe import datetime
-from django.db.models import Sum
-from django.utils import timezone
 from django.utils.functional import cached_property
-
 
 LITER = "L"
 GRAM = "g"
 UNITS = ((GRAM, 'gram'), (LITER, 'Liter'))
+
+
+def normalize(*args):
+    """
+    Normalizes the argurments
+    Scales the arguments, so the total of the arguments add up to 1
+
+    :param args: the arguments to be scaled to 1
+    :return: a tuple with the arguments scaled to 1
+    """
+    total = sum(args)
+    ret = []
+    for i in range(len(args)):
+        ret[i] = args[i] / total
+    return tuple(ret)
 
 
 class Beer(models.Model):
@@ -24,9 +35,10 @@ class Beer(models.Model):
     brewer = models.ForeignKey(User, models.SET_NULL, null=True, blank=True)
 
     sell_price = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    volume = models.PositiveIntegerField(null=True, blank=True)
     bottles = models.PositiveIntegerField(null=True, blank=True)
     sold_bottles = models.PositiveIntegerField(default=0)
-    
+
     @cached_property
     def start(self):
         earliest = None
@@ -36,7 +48,7 @@ class Beer(models.Model):
             elif step.start:
                 earliest = step.start
         return earliest
-    
+
     @cached_property
     def finish(self):
         latest = datetime(1900, 1, 1, tzinfo=pytz.UTC)
@@ -49,7 +61,7 @@ class Beer(models.Model):
                 # return none this is the latest
                 return None
         return latest
-    
+
     @cached_property
     def duration(self):
         longest = None
@@ -76,7 +88,7 @@ class Beer(models.Model):
             if not step.done:
                 return False
         return True
-    
+
     @property
     def in_progress(self):
         return self.start and not self.done
@@ -150,28 +162,53 @@ class Beer(models.Model):
         return deepest
 
     def copy(self):
+        copy_name = self.get_next_name()
+
+        copy = Beer(name=copy_name, note=self.note, brewer=self.brewer, volume=self.volume, bottles=self.bottles,
+                    sell_price=self.sell_price)
+        copy.save()
+
+        self.top_child.copy(copy)
+        return copy
+
+    def split(self, staying, leaving):
+        split_name = self.get_next_name()
+
+        # make sure staying and leaving add up to 1
+        staying, leaving = normalize(staying, leaving)
+
+        # multiply the volume and bottles
+        self.volume = self.volume * staying
+        self.bottles = self.bottles * staying
+        self.save()
+
+        split = Beer(name=split_name, note=self.note, brewer=self.brewer, sell_price=self.sell_price,
+                     volume=self.volume * leaving, bottles=self.bottles * leaving)
+        split.save()
+
+        self.top_child.split(staying, leaving, split)
+        return split
+
+    def get_next_name(self):
         pattern = re.compile(r'(.*?)-(\d+)$')
         if pattern.match(self.name):
+            # this one already has a number, increase the number
             name = pattern.match(self.name).group(1)
             number = int(pattern.match(self.name).group(2))
             max_number = number + 1
         else:
+            # this one has nu no number, so use 2
             name = self.name
             max_number = 2
 
+        # search the database for similar objects
         similar = Beer.objects.filter(name__startswith=name)
         for beer in similar:
             if pattern.match(beer.name):
                 number = int(pattern.match(beer.name).group(2))
                 max_number = max(max_number, number + 1)
 
-        copy_name = "{name}-{number}".format(name=name, number=max_number)
-
-        copy = Beer(name=copy_name, note=self.note)
-        copy.save()
-
-        self.top_child.copy(copy)
-        return copy
+        return "{name}-{number}".format(name=name, number=max_number)
 
     def __str__(self):
         return self.name
@@ -234,7 +271,7 @@ class Step(models.Model):
     def expected_finish(self):
         if self.start and self.duration:
             return self.start + self.duration
-        
+
     @cached_property
     def duration_to_top(self):
         if self.parent is None:
@@ -343,6 +380,25 @@ class Step(models.Model):
         for child in self.children:
             child.copy(beer, copy)
 
+    def split(self, staying, leaving, beer, parent=None):
+
+        # make sure staying and leaving add up to 1
+        staying, leaving = normalize(staying, leaving)
+
+        split = Step(beer=beer, parent=parent, name=self.name, description=self.description, duration=self.duration,
+                     expected_temperature=self.expected_temperature, expected_gravity=self.expected_gravity)
+        split.save()
+
+        # split ingredients
+        for ingredient in self.ingredients.all():
+            ingredient.split(staying, leaving, split)
+
+        # split children
+        for child in self.children:
+            child.split(staying, leaving, beer, split)
+
+        raise NotImplementedError('Not implemented')
+
     def __str__(self):
         return self.name
 
@@ -410,6 +466,9 @@ class Ingredient(models.Model):
     def copy(self, step):
         copy = Ingredient(step=step, name=self.name, amount=self.amount, unit=self.unit)
         return copy.save()
+
+    def split(self, staying, leaving, step):
+        split = Ingredient(step=step, name=self.amount, unit=self.unit)
 
     def __str__(self):
         return self.name
