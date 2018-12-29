@@ -108,11 +108,30 @@ class BeerDetailView(UserPassesTestMixin, ListView, FormMixin):
             beer = form.save(commit=False)
             beer.brewer = self.request.user
             beer.save()
+            self.add_default_steps(beer)
 
         self.kwargs['pk'] = beer.pk
         self.kwargs['beer'] = beer
         self.kwargs['submit_type'] = form.data['action']
         return super(BeerDetailView, self).form_valid(form)
+
+    def add_default_steps(self, beer):
+        bottle = Step(name='bottle', beer=beer)
+        bottle.save()
+        lager = Step(name='lager', beer=beer, parent=bottle)
+        lager.save()
+        ferment = Step(name='ferment', beer=beer, parent=lager)
+        ferment.save()
+        pitch_yeast = Step(name='pitch yeast', beer=beer, parent=ferment)
+        pitch_yeast.save()
+        pitch_starter = Step(name='yeast starter', beer=beer, parent=pitch_yeast)
+        pitch_starter.save()
+        cooling = Step(name='cooling', beer=beer, parent=pitch_yeast)
+        cooling.save()
+        cooking = Step(name='cook', beer=beer, parent=cooling)
+        cooking.save()
+        malt = Step(name='malt', beer=beer, parent=cooking)
+        malt.save()
 
     def get_success_url(self):
         if self.kwargs['submit_type'] == 'Start':
