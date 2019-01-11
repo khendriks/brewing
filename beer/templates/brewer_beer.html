@@ -38,6 +38,14 @@
             {% endfor %}
         </div>
     {% endif %}
+    {% if beer.ingredients %}
+        <div class="m-2 ">
+            Ingredients:<br>
+            {% for ingredient in beer.ingredients %}
+                {{ ingredient.name }}: {{ ingredient.amount }} {{ ingredient.unit }}<br>
+            {% endfor %}
+        </div>
+    {% endif %}
     <div class="fieldWrapper m-2">
         {{ form.note.errors }}
         {{ form.note.label_tag }}<br>

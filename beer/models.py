@@ -1,5 +1,6 @@
 import re
 import warnings
+from collections import OrderedDict
 from datetime import datetime, timedelta
 
 import pytz
@@ -26,7 +27,7 @@ class Beer(models.Model):
     sell_price = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     bottles = models.PositiveIntegerField(null=True, blank=True)
     sold_bottles = models.PositiveIntegerField(default=0)
-    
+
     @cached_property
     def start(self):
         earliest = None
@@ -36,7 +37,7 @@ class Beer(models.Model):
             elif step.start:
                 earliest = step.start
         return earliest
-    
+
     @cached_property
     def finish(self):
         latest = datetime(1900, 1, 1, tzinfo=pytz.UTC)
@@ -49,7 +50,7 @@ class Beer(models.Model):
                 # return none this is the latest
                 return None
         return latest
-    
+
     @cached_property
     def duration(self):
         longest = None
@@ -76,7 +77,7 @@ class Beer(models.Model):
             if not step.done:
                 return False
         return True
-    
+
     @property
     def in_progress(self):
         return self.start and not self.done
@@ -148,6 +149,21 @@ class Beer(models.Model):
                 deepest = step
 
         return deepest
+
+    @property
+    def ingredients(self):
+        queryset = Ingredient.objects.filter(step__beer=self)
+
+        ingredients = OrderedDict()
+        for ingredient in queryset:
+            if ingredient.name + ingredient.unit in ingredients :
+                if ingredients[ingredient.name + ingredient.unit].unit == ingredient.unit:
+                    ingredients[ingredient.name + ingredient.unit].amount += ingredient.amount
+            else:
+                ingredients[ingredient.name + ingredient.unit] = ingredient
+
+        return ingredients.values()
+
 
     def copy(self):
         pattern = re.compile(r'(.*?)-(\d+)$')
@@ -234,7 +250,7 @@ class Step(models.Model):
     def expected_finish(self):
         if self.start and self.duration:
             return self.start + self.duration
-        
+
     @cached_property
     def duration_to_top(self):
         if self.parent is None:
