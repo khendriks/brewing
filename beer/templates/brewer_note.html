@@ -11,7 +11,7 @@
     </div>
     <div class="row">
         <div class="col-6">
-            <a role="button" class="btn btn-danger" href="{% if note %}{% url 'brewer-note-delete' note.pk %}{% else %}{% url 'brewer-beer-list' %}{% endif %}">Delete</a>
+            <a role="button" class="btn btn-danger" href="{% if note.pk %}{% url 'brewer-note-delete' note.pk %}{% else %}{% url 'brewer-beer-list' %}{% endif %}">Delete</a>
         </div>
         <div class="col-6 text-right">
             <input type="submit" name="action" value="Save" class="btn btn-primary" role="button"/>
