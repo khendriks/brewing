@@ -164,7 +164,6 @@ class Beer(models.Model):
 
         return ingredients.values()
 
-
     def copy(self):
         pattern = re.compile(r'(.*?)-(\d+)$')
         if pattern.match(self.name):
@@ -456,3 +455,12 @@ class IngredientBoughtIngredient(models.Model):
 
     def __str__(self):
         return self.ingredient.name + '-' + self.bought_ingredient.name
+
+
+class Note(models.Model):
+
+    user = models.ForeignKey(User, models.CASCADE, related_name='notes')
+    text = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.text

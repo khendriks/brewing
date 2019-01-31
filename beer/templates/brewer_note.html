@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ beer }}{% endblock %}
+{% block content %}
+    <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="fieldWrapper m-2">
+        {{ form.text.errors }}
+        {{ form.text.label_tag }}<br>
+        {{ form.text }}
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <a role="button" class="btn btn-danger" href="{% if note %}{% url 'brewer-note-delete' note.pk %}{% else %}{% url 'brewer-beer-list' %}{% endif %}">Delete</a>
+        </div>
+        <div class="col-6 text-right">
+            <input type="submit" name="action" value="Save" class="btn btn-primary" role="button"/>
+        </div>
+    </div>
+    </form>
+{% endblock %}
