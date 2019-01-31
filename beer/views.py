@@ -10,7 +10,7 @@ from django.views.generic.edit import FormMixin, DeleteView, FormView, CreateVie
 
 from beer.forms import BeerForm, BrewerStepForm, BrewingStepForm, IngredientStepFormSet, \
     IngredientBoughtIngredientFormSet
-from beer.models import Beer, Step, Ingredient, BoughtIngredient, IngredientBoughtIngredient
+from beer.models import Beer, Step, Ingredient, BoughtIngredient, IngredientBoughtIngredient, Note
 from beer.utils import TreeTable, is_staff
 
 # Create your views here.
@@ -28,7 +28,16 @@ class BeerListView(ListView):
             if self.request.user.pk is None:
                 return Beer.objects.none()
             return Beer.objects.filter(brewer__pk=self.request.user.pk)
+            # TODO union with the beers without brewer for staff
         return Beer.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super(BeerListView, self).get_context_data(**kwargs)
+
+        if self.request.user.pk is not None:
+            context['notes'] = Note.objects.filter(user__pk=self.request.user.pk)
+
+        return context
 
 
 class BeerDetailView(UserPassesTestMixin, ListView, FormMixin):
@@ -478,7 +487,7 @@ class BoughtIngredientListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         user = self.request.user
         if user.pk is None:
-            return  BoughtIngredient.objects.none()
+            return BoughtIngredient.objects.none()
 
         return BoughtIngredient.objects.filter(done=False).filter(brewer__pk=user.pk)
 
@@ -511,3 +520,50 @@ class IngredientLinkView(UserPassesTestMixin, FormView):
     def get_success_url(self):
         ingredient = Ingredient.objects.get(pk=self.kwargs.get('ingredient_pk'))
         return reverse('brewer-step', kwargs={'pk': ingredient.step.pk})
+
+
+class NoteDetailView(UserPassesTestMixin, UpdateView):
+    model = Note
+    new = False
+    template_name = 'brewer_note.html'
+    fields = ['text']
+    brewer = False
+    brewing = False
+
+    def test_func(self):
+        if not self.request.user.pk:
+            return False
+
+        note = self.get_object(self.get_queryset())
+        return note.user.pk == self.request.user.pk
+
+    def get_object(self, queryset=None):
+        if self.new:
+            return Note(user=self.request.user)
+
+        return super(NoteDetailView, self).get_object(queryset)
+
+    def get_success_url(self):
+        if self.brewer:
+            return reverse('brewer-beer-list')
+
+        if self.brewing:
+            return reverse('brewing-beer-list')
+
+        return super(NoteDetailView, self).get_success_url()
+
+
+class NoteDeleteView(UserPassesTestMixin, DeleteView):
+    model = Note
+    template_name = 'confirm_delete.html'
+    raise_exception = True
+    success_url = reverse_lazy('brewer-beer-list')
+
+    def test_func(self):
+        note = get_object_or_404(Note, pk=self.kwargs.get('pk'))
+
+        brewer = note.user
+        user = self.request.user
+
+        return brewer.pk == user.pk
+

@@ -2,6 +2,22 @@
 {% block content %}
     <h1>beers</h1>
     <br>
+    {% for note in notes %}
+        <a role="button" class="btn btn-outline-info beer-list-item row" href="{% url 'brewer-note' note.pk %}">
+            <div class="d-flex flex-row-reverse">
+                <div class="p2 beer-text">
+                    Note
+                    <div class="text-left justify-content-between">{{ note.text }}</div>
+                </div>
+            </div>
+        </a><br>
+    {% endfor %}
+    <div class="row">
+        <div class="col-12 text-center">
+            <a role="button" class="btn btn-primary" href="{% url 'brewer-note-new' %}">New Note</a>
+        </div>
+    </div>
+    <br>
     {% for beer in beers %}
         <a role="button" class="btn {% if beer.profit < 0 %}btn-outline-danger{% elif beer.profit > 0 %}btn-outline-success{% else %}btn-outline-warning{% endif %} beer-list-item row" href="{% url 'brewer-beer' beer.pk %}">
             <div class="d-flex flex-row-reverse">
