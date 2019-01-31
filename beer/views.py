@@ -7,13 +7,12 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView, RedirectView
 from django.views.generic.edit import FormMixin, DeleteView, FormView, CreateView, UpdateView, BaseCreateView
+from django import forms
 
 from beer.forms import BeerForm, BrewerStepForm, BrewingStepForm, IngredientStepFormSet, \
     IngredientBoughtIngredientFormSet
 from beer.models import Beer, Step, Ingredient, BoughtIngredient, IngredientBoughtIngredient, Note
 from beer.utils import TreeTable, is_staff
-
-# Create your views here.
 
 
 class BeerListView(ListView):
@@ -188,7 +187,6 @@ class StepDetailView(UserPassesTestMixin, ListView, FormMixin):
 
         user = self.request.user
 
-        brewer = None
         pk = self.kwargs.get('pk')
         if pk:
             brewer = get_object_or_404(Step, pk=self.kwargs.get('pk')).brewer
@@ -216,7 +214,6 @@ class StepDetailView(UserPassesTestMixin, ListView, FormMixin):
     def get_context_data(self, form=None, **kwargs):
 
         ingredients = None
-        ingredient_form_set = None
         top = None
         if self.object_list.count() != 0:
             top = self.object_list.get(parent=None)
@@ -268,22 +265,28 @@ class StepDetailView(UserPassesTestMixin, ListView, FormMixin):
     def post(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
 
-        step=None
+        step = None
         if pk:
             step = Step.objects.get(pk=pk)
 
         if not self.brewing:
             form = BrewerStepForm(request.POST, instance=step)
+            ingredient_form_set = self.get_ingredient_formset(request.POST)
+            if form.is_valid() and ingredient_form_set.is_valid():
+                return self.form_valid(form, ingredient_form_set=ingredient_form_set)
+            else:
+                return self.form_invalid(form, ingredient_form_set=ingredient_form_set)
+
         else:
             form = BrewingStepForm(request.POST, instance=step)
 
-        ingredient_form_set = self.get_ingredient_formset(request.POST)
-        if form.is_valid() and ingredient_form_set.is_valid():
-            return self.form_valid(form, ingredient_form_set=ingredient_form_set)
-        else:
-            return self.form_invalid(form, ingredient_form_set=ingredient_form_set)
+            if form.is_valid():
+                return self.form_valid(form)
+            else:
+                return self.form_invalid(form)
 
     def form_valid(self, form, **subforms):
+        # type: (StepDetailView, forms.ModelForm, **forms.ModelForm) -> HttpResponseRedirect
         step = form.save()
         for subform in subforms.values():
             subform.save()
@@ -292,9 +295,10 @@ class StepDetailView(UserPassesTestMixin, ListView, FormMixin):
         self.kwargs['submit_type'] = form.data['action']
         return super(StepDetailView, self).form_valid(form)
 
-    def form_invalid(self, form, **kwargs):
+    def form_invalid(self, form, **subforms):
+        # type: (StepDetailView, forms.ModelForm, **forms.ModelForm) -> HttpResponse
         self.object_list = self.get_queryset()
-        context = self.get_context_data(form=form, **kwargs)
+        context = self.get_context_data(form=form, **subforms)
         return self.render_to_response(context)
 
     def get_success_url(self):
@@ -420,7 +424,6 @@ class BeerCopyView(UserPassesTestMixin, RedirectView):
         return reverse('brewer-beer', kwargs={'pk': copy.pk})
 
 
-
 class BoughtIngredientCreateView(LoginRequiredMixin, CreateView):
     model = BoughtIngredient
     template_name = 'brewer_ingredient.html'
@@ -434,6 +437,7 @@ class BoughtIngredientCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse('brewer-bought-ingredient', kwargs={'pk': self.object.pk})
+
 
 class BoughtIngredientUpdateView(UserPassesTestMixin, UpdateView):
     model = BoughtIngredient
@@ -566,4 +570,3 @@ class NoteDeleteView(UserPassesTestMixin, DeleteView):
         user = self.request.user
 
         return brewer.pk == user.pk
-
